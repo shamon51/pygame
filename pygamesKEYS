@@ -1,0 +1,253 @@
+#-------------------------------------------------------------------------------
+# Name:        PYGAME keys
+#
+# Author:      Shimon
+#
+# Created:     2/04/2019
+# Copyright:   (c) Shimon 2019
+# 
+#-------------------------------------------------------------------------------
+
+import sys, pygame, time, datetime
+
+class SText () :
+    lsfonts    = None
+    def __init__ ( self , text, textsize = 64,
+                    textcolor = (0,0,0), bkcolor    = (0,255,255),
+                    position  = (0,0)  , fontname   = "ariel"
+        ):
+        self.text       = text
+        self.size       = textsize
+        self.textcolor  = textcolor
+        self.bkcolor    = bkcolor
+        self.fontname   = fontname
+        self.position   = position
+        self.help       = ""
+        self.prep_Text()
+
+    def __str__(self):
+        return str(self.text) # .help
+
+    def sgetHelp ( self, sHelp = None ):
+        if sHelp:
+            self.help = sHelp
+        else: return self.help
+
+    def setText ( self, **kw ) :
+        '''  keywords: text, textsize, textcolor, bkcolor, fontname, position
+        '''
+        if not kw : return
+        for k,v in kw.items():
+            if k == 'text'      : self.text       = v
+            if k == 'textsize'  : self.size       = v
+            if k == 'textcolor' : self.textcolor  = v
+            if k == 'bkcolor'   : self.bkcolor    = v
+            if k == 'fontname'  : self.fontname   = v
+            if k == 'position'  : self.position   = v
+        self.prep_Text()
+
+    def prep_Text ( self ) :
+        fn = self.fontname
+        if type(fn) == int :
+            ls = self.getFonts()
+            self.fontname = ls[fn]
+        self.fontPath   = pygame.font.match_font( self.fontname )
+        self.zFont      = pygame.font.Font(self.fontPath, self.size)
+        self.textSurf   = self.zFont.render(self.text, True, self.textcolor, self.bkcolor)
+        self.textRect   = self.textSurf.get_rect()
+        self.textRect.topleft = self.position
+
+    def insideP ( self, zPoint ) :
+        b = self.textRect.collidepoint( zPoint )
+        return b
+
+    def step ( self ) :
+        screen.blit(self.textSurf, self.textRect)
+
+def getFonts () :
+        if SText.lsfonts == None :
+            SText.lsfonts = sorted( pygame.font.get_fonts() )
+        return  SText.lsfonts
+
+def make_key_text ( event )  :
+    s = 'EVENT type=' + str(event.type)
+    #+ ' ' + str(getattr(event,'dict')  )
+    for k,v in getattr(event,'dict').items():
+        s = s + ' ' + k + '=' + str(v)
+    return s
+
+def make_key_pressed():
+    s = 'PRESSED '
+    pkeys = pygame.key.get_pressed()
+    for n,k in enumerate(pkeys):
+        if k:
+            s = s + str(n) + ':' + pygame.key.name(n) +  ' '
+    return s
+
+class SHelp () :
+
+    def __init__ (self, iLeft):
+        self.lsN = 5
+        self.lsn = 0
+        self.sHelpNone = ['Move mouse over texts']
+        self.ls_lines = []
+        for k in range( self.lsN ):
+            tx = SText('Z', textsize=32, position=( iLeft, 10+k*23 ),
+                        bkcolor=(128,128,128), textcolor=(255,255,255))
+            self.ls_lines.append(tx)
+        self.showHelp(self.sHelpNone)
+
+
+    def showHelp (self, ls_texts ) :
+        self.lsn = 0
+        if not ls_texts : return
+        n = 0
+        for s in ls_texts :
+            self.ls_lines[ n ].setText( text = ' ' + s + ' ')
+            n += 1
+        self.lsn = n
+
+    def step (self) :
+        for k in range(self.lsn) :
+            self.ls_lines[k].step()
+
+def make_texts() :
+    global ls_texts, keytext, presstext, timetext, clocktext, textfontname , textinfont, helpObj
+    helpObj   = SHelp (410)
+    keytext   = SText('None', textsize=32, position=(10,200), bkcolor=None)
+    presstext = SText('None', textsize=32, position=(10,150), bkcolor=None)
+    timetext  = SText('Time', textsize=32, position=(10, 75), bkcolor=None)
+    clocktext = SText('Time', textsize=32, position=(10, 50), bkcolor=None)
+
+    textfontname    =  SText('Time' , textsize=48, position=(10,  300), bkcolor=None)
+    s = 'ABCD abcd 1234 אבגד'
+    textinfont      =  SText(s      , textsize=64, position=(10,  350), bkcolor=None)
+    ls_texts = [keytext, presstext, timetext, clocktext, textfontname , textinfont]
+
+    presstext.sgetHelp     (["Show which keys are pressed - try multiple presses"])
+    keytext.sgetHelp       (["Show details of current PYGAME EVENT"])
+    clocktext.sgetHelp     (["Show Clock"])
+    timetext.sgetHelp      (["Show elapsed time - from start of program run"])
+    textfontname.sgetHelp  (["Show Font name used to display the text",
+                                'Use arrows to change the Font name',
+                                'Use CTRL-LEFT for speedy change of Font name '])
+    textinfont.sgetHelp    (["Show example text using the chosen Font"])
+
+
+def make_clocks () :
+    sb = str(datetime.datetime.now())
+    sc = sb[:19] #+ ' ' + sb[19:]
+    mousePoint = pygame.mouse.get_pos()
+    sc = sc + ' '  + str(mousePoint)
+    clocktext.setText(text=sc)
+    clocktext.step()
+
+    tk = pygame.time.get_ticks()
+    tkmin, tksec = divmod(tk, 60000)
+    tksec, tkmil = divmod(tksec, 1000)
+    st = f'{tkmin:2} : {tksec:0>2} . {tkmil}'
+    s = 'Time (min : sec . mil): ' + str(st)
+
+    timetext.setText(text=s)
+    timetext.step()
+
+def make_font_text( kFont , lsFonts ):
+
+    textfontname.setText(text = 'Font ( ' + str(kFont) + ' ) : ' + lsFonts[kFont])
+    textinfont.setText(fontname = lsFonts[kFont])
+    textfontname.step()
+    textinfont.step()
+
+def do_texts():
+    s = make_key_text (zEvent)
+    keytext.setText(text=s)
+    keytext.step()
+
+    s = make_key_pressed()
+    presstext.setText(text=s)
+    presstext.step()
+
+    make_clocks()
+
+    make_font_text( kFont, lsFonts )
+
+def do_key_event ( ev, kFont, nFonts ) :
+
+    kf = kFont
+    if not ev.type == pygame.KEYUP : return kf
+
+    ky = getattr(ev, "key")
+    md = getattr(ev, "mod")
+    x  = 0
+
+    if ky == 97  or ky == 275  : x += 1    # a s d    ->                                   # ^
+    if ky == 115 or ky == 273  : x += 10
+    if ky == 100               : x += 50
+    if ky == 98  or ky == 276  : x -= 1    # b n m    <-
+    if ky == 110 or ky == 274  : x -= 10              # v
+    if ky == 109               : x -= 50
+    if md == 64 : x = x * 5
+    kf += x
+    if kf < 0 : kf += nFonts
+    kf = kf % nFonts
+    return kf
+
+def main () :
+    pygame.init()
+
+    global   width, height,  screen, zEvent, kFont, nFonts, lsFonts
+
+    width, height = 950,500
+    size   = width, height
+    screen = pygame.display.set_mode(size)
+
+    make_texts ()
+
+    kFont    = 0
+    lsFonts  = getFonts()
+    nFonts   = len(lsFonts)
+
+    while True:    # event loop
+        #if not keytext.text[0] =='X':
+        #    keytext.setText(text='X ' + keytext.text)
+        for event in pygame.event.get():
+            zEvent = event
+
+            if event.type == pygame.KEYUP :
+                if event.dict['key'] == 113   :
+                    pygame.quit()
+                    sys.exit()
+                kFont = do_key_event ( event, kFont, nFonts )
+
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()   # EXIT !!! from loop
+
+        color_black     = 0, 0, 0
+        color_red       = 255,0,0
+        color_purpule   = 255,0,255
+        color_nice      = 255,127,255
+
+        screen.fill(color_nice)
+
+        do_texts ()
+
+        mousePoint = pygame.mouse.get_pos()
+        b = bb = 0
+        for tx in ls_texts:
+
+            b = tx.insideP(mousePoint)
+            if b:
+                sHelp = tx.sgetHelp()
+                helpObj.showHelp(sHelp)
+                bb = 1
+                continue
+        if not bb : helpObj.showHelp(helpObj.sHelpNone)
+        helpObj.step()
+
+        pygame.display.flip()
+        time.sleep( 0.12 )
+
+if __name__ == "__main__":
+    main()
+
